@@ -1,0 +1,17 @@
+[package]
+authors = ["skupr <semargal@gmail.com>"]
+edition = "2018"
+name = "num-to-words"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["en_us"]
+en_us = []
+uk_ua = []
+
+[profile.release]
+codegen-units = 1 # Set this to 1 to allow for maximum size reduction optimizations
+lto = true # Link Time Optimization (LTO)
+opt-level = 3
