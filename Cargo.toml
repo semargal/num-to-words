@@ -1,5 +1,6 @@
 [package]
 authors = ["skupr <semargal@gmail.com>"]
+description = "Number to words converter"
 edition = "2018"
 name = "num-to-words"
 version = "0.1.0"
