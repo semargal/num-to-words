@@ -1,15 +1,17 @@
-use crate::types::*;
+use crate::errors::{Error, ErrorRepr};
 use crate::utils::*;
+use num::{Integer, NumCast};
+use std::ops::Neg;
 
-const UNITS: [StaticStr; 10] = [
+const UNITS: [&str; 10] = [
     "", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
 ];
 
-const TENS: [StaticStr; 10] = [
+const TENS: [&str; 10] = [
     "", "ten", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
 ];
 
-const TEENS: [StaticStr; 10] = [
+const TEENS: [&str; 10] = [
     "ten",
     "eleven",
     "twelve",
@@ -22,7 +24,7 @@ const TEENS: [StaticStr; 10] = [
     "nineteen",
 ];
 
-const MEGAS: [StaticStr; 16] = [
+const MEGAS: [&str; 16] = [
     "",
     "thousand",
     "million",
@@ -42,37 +44,50 @@ const MEGAS: [StaticStr; 16] = [
 ];
 
 /// Converts integers to English
-pub fn integer_to_en_us(mut input: Int) -> Result<String> {
+pub fn integer_to_en_us<T: Integer + NumCast + Neg<Output = T> + Copy>(
+    mut input: T,
+) -> Result<String, Error> {
     let mut words: Vec<String> = vec![];
 
-    if input < 0 {
+    if input < T::zero() {
         words.push("minus".into());
-        input *= -1;
+        input = input.neg();
     }
 
-    let triplets = int_to_triplets(input);
+    let triplets = int_to_triplets(input)?;
 
     // Zero is a special case
     if triplets.is_empty() {
         return Ok("zero".into());
     }
+
+    let zero = T::zero().to_usize().ok_or(ErrorRepr::IntToUsizeError)?;
+    let ten = T::from(10).ok_or(ErrorRepr::IntToGenError)?;
+    let hundred = T::from(100).ok_or(ErrorRepr::IntToGenError)?;
+
     // Iterate over triplets
     for (idx, triplet) in triplets.iter().enumerate().rev() {
-        if triplet == &0 {
+        if triplet == &T::zero() {
             continue;
         }
 
         // Three digits
-        let hundreds = (triplet / 100 % 10) as usize;
-        let tens = (triplet / 10 % 10) as usize;
-        let units = (triplet % 10) as usize;
+        let hundreds = (*triplet / hundred % ten)
+            .to_usize()
+            .ok_or(ErrorRepr::IntToUsizeError)?;
+        let tens = (*triplet / ten % ten)
+            .to_usize()
+            .ok_or(ErrorRepr::IntToUsizeError)?;
+        let units = (*triplet % ten)
+            .to_usize()
+            .ok_or(ErrorRepr::IntToUsizeError)?;
 
-        if hundreds > 0 {
+        if hundreds > zero {
             words.push(UNITS[hundreds].into());
             words.push("hundred".into());
         }
 
-        if tens != 0 || units != 0 {
+        if tens != zero || units != zero {
             match tens {
                 0 => {
                     words.push(UNITS[units].into());
@@ -82,7 +97,7 @@ pub fn integer_to_en_us(mut input: Int) -> Result<String> {
                 }
                 _ => {
                     let mut ten: String = TENS[tens].into();
-                    if units > 0 {
+                    if units > zero {
                         ten = format!("{}-{}", ten, UNITS[units]);
                     }
                     words.push(ten);
@@ -105,7 +120,7 @@ mod tests {
     use super::*;
     use crate::test_utils::*;
 
-    const TEST_SET: [InOut; 47] =
+    const TEST_SET: [InOut<i64>; 47] =
         [
             InOut(-1, "minus one"),
             InOut(0, "zero"),

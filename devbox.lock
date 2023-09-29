@@ -1,0 +1,18 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "openssl": {
+      "resolved": "github:NixOS/nixpkgs/f80ac848e3d6f0c12c52758c0f25c10c97ca3b62#openssl"
+    },
+    "pkg-config": {
+      "resolved": "github:NixOS/nixpkgs/f80ac848e3d6f0c12c52758c0f25c10c97ca3b62#pkg-config"
+    },
+    "rust-analyzer": {
+      "resolved": "github:NixOS/nixpkgs/f80ac848e3d6f0c12c52758c0f25c10c97ca3b62#rust-analyzer"
+    },
+    "rustup": {
+      "plugin_version": "0.0.1",
+      "resolved": "github:NixOS/nixpkgs/f80ac848e3d6f0c12c52758c0f25c10c97ca3b62#rustup"
+    }
+  }
+}

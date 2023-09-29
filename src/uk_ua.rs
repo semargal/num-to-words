@@ -1,7 +1,9 @@
-use crate::types::*;
+use crate::errors::{Error, ErrorRepr};
 use crate::utils::*;
+use num::{Integer, NumCast};
+use std::ops::Neg;
 
-const UNITS: [StaticStr; 10] = [
+const UNITS: [&str; 10] = [
     "",
     "один",
     "два",
@@ -14,7 +16,7 @@ const UNITS: [StaticStr; 10] = [
     "дев'ять",
 ];
 
-const TEENS: [StaticStr; 10] = [
+const TEENS: [&str; 10] = [
     "десять",
     "одинадцять",
     "дванадцять",
@@ -27,7 +29,7 @@ const TEENS: [StaticStr; 10] = [
     "дев'ятнадцять",
 ];
 
-const TENS: [StaticStr; 10] = [
+const TENS: [&str; 10] = [
     "",
     "десять",
     "двадцять",
@@ -40,7 +42,7 @@ const TENS: [StaticStr; 10] = [
     "дев'яносто",
 ];
 
-const HUNDREDS: [StaticStr; 10] = [
+const HUNDREDS: [&str; 10] = [
     "",
     "сто",
     "двісті",
@@ -53,52 +55,66 @@ const HUNDREDS: [StaticStr; 10] = [
     "дев'ятсот",
 ];
 
-const MEGAS: [[StaticStr; 3]; 10] = [
+const MEGAS: [[&str; 3]; 10] = [
     ["", "", ""],
-    ["тисяча", "тисячі", "тисяч"], // 10^3
-    ["мільйон", "мільйона", "мільйонів"], // 10^6
-    ["мільярд", "мільярда", "мільярдів"], // 10^9
-    ["трильйон", "трильйона", "трильйонів"], // 10^12
+    ["тисяча", "тисячі", "тисяч"],                    // 10^3
+    ["мільйон", "мільйона", "мільйонів"],             // 10^6
+    ["мільярд", "мільярда", "мільярдів"],             // 10^9
+    ["трильйон", "трильйона", "трильйонів"],          // 10^12
     ["квадрильйон", "квадрильйона", "квадрильйонів"], // 10^15
     ["квінтильйон", "квінтильйона", "квінтильйонів"], // 10^18
     ["секстильйон", "секстильйона", "секстильйонів"], // 10^21
-    ["септильйон", "септильйона", "септильйонів"], // 10^34
-    ["октильйон", "октильйона", "октильйонів"], // 10^27
+    ["септильйон", "септильйона", "септильйонів"],    // 10^34
+    ["октильйон", "октильйона", "октильйонів"],       // 10^27
 ];
 
 /// Converts integers to Ukrainian
-pub fn integer_to_uk_ua(mut input: Int) -> Result<String> {
+pub fn integer_to_uk_ua<T: Integer + NumCast + Neg<Output = T> + Copy>(
+    mut input: T,
+) -> Result<String, Error> {
     let mut words: Vec<String> = vec![];
 
-    if input < 0 {
+    if input < T::zero() {
         words.push("мінус".into());
-        input *= -1
+        input = input.neg();
     }
 
     // Split integer in triplets
-    let triplets = int_to_triplets(input);
+    let triplets = int_to_triplets(input)?;
 
     // Zero is a special case
     if triplets.is_empty() {
         return Ok("нуль".into());
     }
 
+    let zero = T::zero().to_usize().ok_or(ErrorRepr::IntToUsizeError)?;
+    let one = T::one().to_usize().ok_or(ErrorRepr::IntToUsizeError)?;
+    let ten = T::from(10).ok_or(ErrorRepr::IntToGenError)?;
+    let ten_usize = ten.to_usize().ok_or(ErrorRepr::IntToUsizeError)?;
+    let hundred = T::from(100).ok_or(ErrorRepr::IntToGenError)?;
+
     // Iterate over triplets
     for (idx, triplet) in triplets.iter().enumerate().rev() {
-        if triplet == &0 {
+        if triplet == &T::zero() {
             continue;
         }
 
         // Three digits
-        let hundreds = (triplet / 100 % 10) as usize;
-        let mut tens = (triplet / 10 % 10) as usize;
-        let units = (triplet % 10) as usize;
+        let hundreds = (*triplet / hundred % ten)
+            .to_usize()
+            .ok_or(ErrorRepr::IntToUsizeError)?;
+        let mut tens = (*triplet / ten % ten)
+            .to_usize()
+            .ok_or(ErrorRepr::IntToUsizeError)?;
+        let units = (*triplet % ten)
+            .to_usize()
+            .ok_or(ErrorRepr::IntToUsizeError)?;
 
-        if hundreds > 0 {
+        if hundreds > zero {
             words.push(HUNDREDS[hundreds].into());
         }
 
-        if tens != 0 || units != 0 {
+        if tens != zero || units != zero {
             match tens {
                 0 => {
                     words.push(fix_one_two_unit(units, idx, &UNITS));
@@ -117,9 +133,9 @@ pub fn integer_to_uk_ua(mut input: Int) -> Result<String> {
         }
 
         // Mega
-        if idx >= 1 && idx < MEGAS.len() {
+        if idx >= one && idx < MEGAS.len() {
             let mega = MEGAS[idx];
-            tens = tens * 10 + units;
+            tens = tens * ten_usize + units;
 
             if !mega.is_empty() {
                 words.push(plural(tens, &mega));
@@ -167,7 +183,7 @@ mod tests {
     use super::*;
     use crate::test_utils::*;
 
-    const TEST_SET: [InOut; 64] = [
+    const TEST_SET: [InOut<i64>; 64] = [
 		InOut(-1, "мінус один"),
 		InOut(0, "нуль"),
 		InOut(1, "один"),

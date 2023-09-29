@@ -5,7 +5,7 @@ edition = "2018"
 license-file = "LICENSE"
 name = "num-to-words"
 repository = "https://github.com/semargal/num-to-words"
-version = "0.1.0"
+version = "0.1.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,3 +18,7 @@ uk_ua = []
 codegen-units = 1 # Set this to 1 to allow for maximum size reduction optimizations
 lto = true # Link Time Optimization (LTO)
 opt-level = 3
+
+[dependencies]
+num = "0.4.1"
+thiserror = "1.0.49"

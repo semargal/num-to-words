@@ -4,9 +4,9 @@
 
 #[cfg(feature = "en_us")]
 mod en_us;
+mod errors;
 #[cfg(test)]
 mod test_utils;
-mod types;
 #[cfg(feature = "uk_ua")]
 mod uk_ua;
 mod utils;
